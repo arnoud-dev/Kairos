@@ -1,12 +1,10 @@
 package main;
 
-import cui.KairosApplication;
-import domein.DomeinController;
+import cui.MainApplication;
 
 public class StartUp {
 	public static void main(String[] args) {
-		DomeinController dc = new DomeinController();
-		KairosApplication app = new KairosApplication(dc);
+		MainApplication app = new MainApplication();
 		app.start();
 	}
 }

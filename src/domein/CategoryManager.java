@@ -237,11 +237,13 @@ public class CategoryManager {
     public String tasksToString(String categoryName, String subjectName) {
         Subject s = getSubjectByName(categoryName, subjectName);
         if (s == null) return "Subject not found: " + subjectName;
+
         StringBuilder sb = new StringBuilder();
+        int index = 1;
         for (Task t : s.getTasks()) {
-            sb.append(t.getName())
-              .append(" [").append(t.getDifficulty()).append("]")
-              .append(t.isCompleted() ? " (Completed)" : "")
+            sb.append(index++)
+              .append(". ")
+              .append(t.toString())
               .append(System.lineSeparator());
         }
         return sb.toString();

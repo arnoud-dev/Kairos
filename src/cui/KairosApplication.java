@@ -9,13 +9,13 @@ import java.util.List;
 import java.util.Scanner;
 
 import domein.Difficulty;
-import domein.DomeinController;
+import domein.CategoryController;
 
 public class KairosApplication {
-    private final DomeinController dc;
+    private final CategoryController dc;
     private final Scanner input;
 
-    public KairosApplication(DomeinController dc) {
+    public KairosApplication(CategoryController dc) {
         this.dc = dc;
         this.input = new Scanner(System.in);
     }
@@ -45,7 +45,7 @@ public class KairosApplication {
             "Manage categories",
             "Manage subjects",
             "Manage tasks",
-            "Exit"
+            "Back"
         };
         return makeChoice("Main Menu", options);
     }
@@ -81,7 +81,7 @@ public class KairosApplication {
     }
 
     private void taskMenu() {
-        String[] options = {"Show tasks", "Add task", "Edit task", "Remove task", "Back"};
+        String[] options = {"Show tasks", "Add task", "Edit task", "Remove task", "Manage task links", "Back"};
         while (true) {
             int choice = makeChoice("Task Menu", options);
             switch (choice) {
@@ -89,9 +89,75 @@ public class KairosApplication {
                 case 2 -> makeNewTask();
                 case 3 -> editTask();
                 case 4 -> removeTask();
-                case 5 -> { return; }
+                case 5 -> manageTaskLinks();
+                case 6 -> { return; }
                 default -> System.out.println("Invalid choice.");
             }
+        }
+    }
+
+    // ------------- TASK LINK FUNCTIONS -------------
+    private void manageTaskLinks() {
+        String categoryName = chooseCategory();
+        if (categoryName == null) return;
+        String subjectName = chooseSubject(categoryName);
+        if (subjectName == null) return;
+        String taskName = chooseTask(categoryName, subjectName);
+        if (taskName == null) return;
+
+        while (true) {
+            String[] options = {"Show links", "Add link", "Remove link", "Back"};
+            int choice = makeChoice("Manage Links for '" + taskName + "'", options);
+
+            switch (choice) {
+                case 1 -> showTaskLinks(categoryName, subjectName, taskName);
+                case 2 -> addTaskLink(categoryName, subjectName, taskName);
+                case 3 -> removeTaskLink(categoryName, subjectName, taskName);
+                case 4 -> { return; }
+                default -> System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    private void showTaskLinks(String categoryName, String subjectName, String taskName) {
+        try {
+            String links = dc.getTaskLinks(categoryName, subjectName, taskName);
+            System.out.println("\nLinks for task '" + taskName + "':");
+            System.out.println(links);
+        } catch (Exception e) {
+            System.out.println("Error retrieving links: " + e.getMessage());
+        }
+    }
+
+    private void addTaskLink(String categoryName, String subjectName, String taskName) {
+        System.out.print("Enter link name: ");
+        String linkName = input.nextLine().trim();
+        System.out.print("Enter URL: ");
+        String url = input.nextLine().trim();
+        try {
+            dc.addTaskLink(categoryName, subjectName, taskName, linkName, url);
+            System.out.println("Link added successfully.");
+            System.out.println("Saved links now:");
+            System.out.println(dc.getTaskLinks(categoryName, subjectName, taskName));
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Unexpected error while adding link: " + e.getMessage());
+        }
+    }
+
+    private void removeTaskLink(String categoryName, String subjectName, String taskName) {
+        System.out.print("Enter link name to remove: ");
+        String linkName = input.nextLine().trim();
+        try {
+            dc.removeTaskLink(categoryName, subjectName, taskName, linkName);
+            System.out.println("Link removed successfully.");
+            System.out.println("Saved links now:");
+            System.out.println(dc.getTaskLinks(categoryName, subjectName, taskName));
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Unexpected error while removing link: " + e.getMessage());
         }
     }
 
@@ -123,25 +189,7 @@ public class KairosApplication {
         return lines.toArray(new String[0]);
     }
 
-    private String extractNameFromDisplay(String displayLine) {
-        if (displayLine == null) return null;
-        String line = displayLine.trim();
-        int idx = indexOfFirst(line, " (", " [", " | ");
-        return idx == -1 ? line : line.substring(0, idx);
-    }
-
-    private int indexOfFirst(String s, String... patterns) {
-        int min = -1;
-        for (String p : patterns) {
-            int i = s.indexOf(p);
-            if (i != -1) {
-                if (min == -1 || i < min) min = i;
-            }
-        }
-        return min;
-    }
-
-    private String chooseFromDisplayLines(String title, String displayLines) {
+    private String chooseDisplayLine(String title, String displayLines) {
         String[] items = toLines(displayLines);
         if (items.length == 0) {
             System.out.println("No " + title.toLowerCase() + " available.");
@@ -165,19 +213,69 @@ public class KairosApplication {
             System.out.println("Invalid choice.");
             return null;
         }
-        return extractNameFromDisplay(items[choice - 1]);
+        return items[choice - 1];
+    }
+
+    private String extractNameFromDisplay(String displayLine) {
+        if (displayLine == null) return null;
+        String line = displayLine.trim();
+        int idx = indexOfFirst(line, " (", " [", " | ");
+        return idx == -1 ? line : line.substring(0, idx);
+    }
+
+    private String extractTaskNameFromDisplay(String displayLine) {
+        if (displayLine == null) return null;
+
+        int nameIndex = displayLine.indexOf("name='");
+        if (nameIndex != -1) {
+            int start = nameIndex + "name='".length();
+            int end = displayLine.indexOf("'", start);
+            if (end > start) return displayLine.substring(start, end);
+        }
+        String trimmed = displayLine.trim();
+        if (trimmed.matches("^\\d+\\.\\s+.*$")) {
+            int dot = trimmed.indexOf('.');
+            String remainder = trimmed.substring(dot + 1).trim();
+
+            int idx2 = remainder.indexOf("name='");
+            if (idx2 != -1) {
+                int start = idx2 + "name='".length();
+                int end = remainder.indexOf("'", start);
+                if (end > start) return remainder.substring(start, end);
+            }
+
+            int idx = indexOfFirst(remainder, " (", " [", " | ");
+            return idx == -1 ? remainder : remainder.substring(0, idx).trim();
+        }
+
+        int idx = indexOfFirst(trimmed, " (", " [", " | ");
+        return idx == -1 ? trimmed : trimmed.substring(0, idx).trim();
+    }
+
+    private int indexOfFirst(String s, String... patterns) {
+        int min = -1;
+        for (String p : patterns) {
+            int i = s.indexOf(p);
+            if (i != -1) {
+                if (min == -1 || i < min) min = i;
+            }
+        }
+        return min;
     }
 
     private String chooseCategory() {
-        return chooseFromDisplayLines("Categories", dc.categoriesToString());
+        String selectedLine = chooseDisplayLine("Categories", dc.categoriesToString());
+        return selectedLine == null ? null : extractNameFromDisplay(selectedLine);
     }
 
     private String chooseSubject(String categoryName) {
-        return chooseFromDisplayLines("Subjects in " + categoryName, dc.subjectsToString(categoryName));
+        String selectedLine = chooseDisplayLine("Subjects in " + categoryName, dc.subjectsToString(categoryName));
+        return selectedLine == null ? null : extractNameFromDisplay(selectedLine);
     }
 
     private String chooseTask(String categoryName, String subjectName) {
-        return chooseFromDisplayLines("Tasks in " + subjectName, dc.tasksToString(categoryName, subjectName));
+        String selectedLine = chooseDisplayLine("Tasks in " + subjectName, dc.tasksToString(categoryName, subjectName));
+        return selectedLine == null ? null : extractTaskNameFromDisplay(selectedLine);
     }
 
     // -------- CATEGORY FUNCTIONS --------
