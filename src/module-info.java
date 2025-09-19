@@ -1,3 +1,8 @@
 module Kairos {
-    requires java.desktop; // Needed for Swing GUI components
+    requires javafx.controls;
+    requires javafx.fxml;
+	requires javafx.graphics;
+
+    exports gui;
+    opens gui to javafx.fxml;
 }
