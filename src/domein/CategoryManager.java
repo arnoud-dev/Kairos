@@ -3,6 +3,7 @@ package domein;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleToIntFunction;
 
 import repo.CategoryRepository;
 
@@ -251,6 +252,19 @@ public class CategoryManager {
     public List<Task> getTasksForSubject(String categoryName, String subjectName) {
         Subject s = getSubjectByName(categoryName, subjectName);
         return s != null ? new ArrayList<>(s.getTasks()) : new ArrayList<>();
+    }
+    
+    public Task getRandomTask() {
+        List<Task> allTasks = new ArrayList<>();
+        for (Category c : categories) {
+            for (Subject s : c.getSubjects()) {
+                allTasks.addAll(s.getTasks());
+            }
+        }
+        if (allTasks.isEmpty()) {
+            return null;
+        }
+        return allTasks.get((int) (Math.random() * allTasks.size()));
     }
 
     public String categoriesToString() {

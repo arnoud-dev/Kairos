@@ -30,13 +30,13 @@ public class CoursesPage extends VBox {
     private final HostServices hostServices;
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("H:mm");
 
-    public CoursesPage(HostServices hostServices) {
+    public CoursesPage(HostServices hostServices, CategoryController controller) {
         this.hostServices = hostServices;
         setSpacing(18);
         setPadding(new Insets(26));
         setStyle("-fx-background-color: linear-gradient(to bottom, #f3f6f8, #eef3f6);");
 
-        controller = new CategoryController();
+        this.controller = controller;
 
         Label title = new Label("Courses");
         title.setStyle("-fx-font-size: 28px; -fx-text-fill: #2c3e50; -fx-font-weight: 700;");
@@ -91,9 +91,7 @@ public class CoursesPage extends VBox {
             ".scroll-bar .thumb { -fx-background-color: #1abc9c; -fx-background-radius: 6px; }" +
             ".scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-background-color: transparent; }"
         );
-
         getChildren().addAll(topRow, sp);
-
         buildCourses();
     }
 

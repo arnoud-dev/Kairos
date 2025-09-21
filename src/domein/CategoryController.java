@@ -60,6 +60,10 @@ public class CategoryController {
     public void removeTask(String categoryName, String subjectName, String taskName) {
         catMan.removeTask(categoryName, subjectName, taskName);
     }
+    
+    public Task getRandomTask() {
+		return catMan.getRandomTask();
+	}
 
     // --- Link operations ---
     public void addTaskLink(String categoryName, String subjectName, String taskName, String linkName, String url) {
